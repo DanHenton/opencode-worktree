@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/danhenton/opencode-worktree/internal/git"
-	"github.com/danhenton/opencode-worktree/internal/merge"
 	"github.com/danhenton/opencode-worktree/internal/worktree"
 )
 
@@ -29,7 +28,7 @@ Examples:
 `)
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(reorderKnownBoolFlags(args, "--no-merge")); err != nil {
 		return errSilent
 	}
 
@@ -48,7 +47,7 @@ Examples:
 	}
 
 	if err := worktree.ValidateTaskName(taskName); err != nil {
-		return fmt.Errorf("%v", err)
+		return err
 	}
 
 	repoRoot, err := git.RepoRoot(".")
@@ -63,7 +62,7 @@ Examples:
 
 	exists, err := worktree.AlreadyExists(repoRoot, taskName)
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return err
 	}
 	if exists {
 		return fmt.Errorf("a worktree for '%s%s' already exists — use 'opencode-worktree list' to see active sessions", worktree.BranchPrefix, taskName)
@@ -79,7 +78,7 @@ Examples:
 
 	createdDir, err := worktree.Create(repoRoot, taskName, parentBranch)
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return err
 	}
 
 	fmt.Printf("%sAgent session '%s' starting.\n", emoji("✅ ", ""), taskName)
@@ -89,19 +88,5 @@ Examples:
 	}
 	fmt.Println()
 
-	_ = worktree.LaunchOpenCode(createdDir, initialPrompt)
-
-	if *noMerge {
-		return nil
-	}
-
-	fmt.Println()
-	result, err := merge.Run(createdDir, true)
-	if err != nil {
-		if err := handleMergeError(result, err); err != nil {
-			return err
-		}
-	}
-	printMergeResult(result)
-	return nil
+	return launchAndMaybeMerge(createdDir, initialPrompt, *noMerge)
 }

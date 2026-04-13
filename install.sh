@@ -48,3 +48,65 @@ case ":$PATH:" in
     printf '  export PATH="%s:$PATH"\n' "$BIN_DIR"
     ;;
 esac
+
+install_completions() {
+  completion_marker="# opencode-worktree completions"
+
+  zsh_snippet='# opencode-worktree completions
+_opencode_worktree() {
+  if (( CURRENT == 2 )); then
+    compadd $(opencode-worktree --completions 2>/dev/null)
+  elif (( CURRENT == 3 )); then
+    compadd $(opencode-worktree --completions ${words[2]} 2>/dev/null)
+  fi
+}
+compdef _opencode_worktree opencode-worktree'
+
+  bash_snippet='# opencode-worktree completions
+_opencode_worktree() {
+  if [ "${#COMP_WORDS[@]}" -eq 2 ]; then
+    COMPREPLY=($(compgen -W "$(opencode-worktree --completions 2>/dev/null)" -- "${COMP_WORDS[1]}"))
+  elif [ "${#COMP_WORDS[@]}" -eq 3 ]; then
+    COMPREPLY=($(compgen -W "$(opencode-worktree --completions "${COMP_WORDS[1]}" 2>/dev/null)" -- "${COMP_WORDS[2]}"))
+  fi
+}
+complete -F _opencode_worktree opencode-worktree'
+
+  shell="$(basename "${SHELL:-}")"
+  rc_file=""
+  snippet=""
+
+  case "$shell" in
+    zsh)
+      snippet="$zsh_snippet"
+      if [ -f "$HOME/.zshrc" ]; then
+        rc_file="$HOME/.zshrc"
+      fi
+      ;;
+    bash)
+      snippet="$bash_snippet"
+      if [ -f "$HOME/.bashrc" ]; then
+        rc_file="$HOME/.bashrc"
+      elif [ -f "$HOME/.bash_profile" ]; then
+        rc_file="$HOME/.bash_profile"
+      fi
+      ;;
+  esac
+
+  if [ -z "$rc_file" ] || [ -z "$snippet" ]; then
+    printf '\nShell completions: could not detect shell rc file. Add manually:\n'
+    printf '  See: https://github.com/%s#shell-completions\n' "$REPO"
+    return
+  fi
+
+  if grep -qF "$completion_marker" "$rc_file" 2>/dev/null; then
+    printf '\nShell completions already installed in %s\n' "$rc_file"
+    return
+  fi
+
+  printf '\n%s\n' "$snippet" >> "$rc_file"
+  printf '\nShell completions installed in %s\n' "$rc_file"
+  printf 'Restart your shell or run: source %s\n' "$rc_file"
+}
+
+install_completions

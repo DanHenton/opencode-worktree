@@ -105,6 +105,35 @@ func GitCommonDir(dir string) (string, error) {
 	return filepath.Join(dir, out), nil
 }
 
+func HasUncommittedChanges(dir string, excludePaths []string) (bool, error) {
+	out, err := run(dir, "status", "--porcelain")
+	if err != nil {
+		return false, err
+	}
+	if out == "" {
+		return false, nil
+	}
+	if len(excludePaths) == 0 {
+		return true, nil
+	}
+
+	excluded := make(map[string]bool, len(excludePaths))
+	for _, p := range excludePaths {
+		excluded[p] = true
+	}
+
+	for _, line := range strings.Split(out, "\n") {
+		if len(line) < 4 {
+			continue
+		}
+		filePath := strings.TrimSpace(line[3:])
+		if !excluded[filePath] {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func BranchList(dir string) (string, error) {
 	return run(dir, "branch")
 }

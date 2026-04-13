@@ -217,12 +217,20 @@ func runCleanup() {
 }
 
 func printMergeResult(result *merge.Result) {
-	if result.NoNewCommits {
+	if result.DirtyWorktree {
+		fmt.Printf("⚠️  Worktree has uncommitted changes — preserved at: %s\n", result.WorktreePath)
+		fmt.Println("   Commit or discard your changes, then run 'opencode-worktree merge' to finish.")
+	}
+	if result.NoNewCommits && !result.DirtyWorktree {
 		fmt.Printf("⚠️  No new commits found on %s. Cleaned up worktree only.\n", result.AgentBranch)
 		return
 	}
 	if result.Merged {
-		fmt.Printf("🚀 Merged %s into %s and cleaned up.\n", result.AgentBranch, result.ParentBranch)
+		if result.DirtyWorktree {
+			fmt.Printf("🚀 Merged %s into %s (worktree kept due to uncommitted changes).\n", result.AgentBranch, result.ParentBranch)
+		} else {
+			fmt.Printf("🚀 Merged %s into %s and cleaned up.\n", result.AgentBranch, result.ParentBranch)
+		}
 	}
 }
 

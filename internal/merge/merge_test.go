@@ -135,6 +135,80 @@ func TestMergeNoCleanup(t *testing.T) {
 	}
 }
 
+func TestMergeDirtyWorktreeNoCommitsPreservesWorktree(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	parentBranch, _ := git.CurrentBranch(repoDir)
+
+	taskName := "feature-dirty"
+	worktreeDir, err := worktree.Create(repoDir, taskName, parentBranch)
+	if err != nil {
+		t.Fatalf("failed to create worktree: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(worktreeDir, "unsaved-work.txt"), []byte("important work"), 0644); err != nil {
+		t.Fatalf("failed to write uncommitted file: %v", err)
+	}
+
+	result, err := merge.Run(worktreeDir, true)
+	if err != nil {
+		t.Fatalf("unexpected error during merge: %v", err)
+	}
+
+	if !result.NoNewCommits {
+		t.Errorf("expected NoNewCommits to be true")
+	}
+
+	if !result.DirtyWorktree {
+		t.Errorf("expected DirtyWorktree to be true")
+	}
+
+	if _, err := os.Stat(worktreeDir); os.IsNotExist(err) {
+		t.Errorf("expected worktree to be preserved due to uncommitted changes")
+	}
+
+	if _, err := os.Stat(filepath.Join(worktreeDir, "unsaved-work.txt")); os.IsNotExist(err) {
+		t.Errorf("expected uncommitted file to still exist")
+	}
+}
+
+func TestMergeDirtyWorktreeWithCommitsPreservesWorktree(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	parentBranch, _ := git.CurrentBranch(repoDir)
+
+	taskName := "feature-dirty-commits"
+	worktreeDir, err := worktree.Create(repoDir, taskName, parentBranch)
+	if err != nil {
+		t.Fatalf("failed to create worktree: %v", err)
+	}
+
+	testutil.CommitFile(t, worktreeDir, "committed.txt", "committed content", "Agent commit")
+
+	if err := os.WriteFile(filepath.Join(worktreeDir, "unsaved-work.txt"), []byte("more work"), 0644); err != nil {
+		t.Fatalf("failed to write uncommitted file: %v", err)
+	}
+
+	result, err := merge.Run(worktreeDir, true)
+	if err != nil {
+		t.Fatalf("unexpected error during merge: %v", err)
+	}
+
+	if !result.Merged {
+		t.Errorf("expected merge to succeed")
+	}
+
+	if !result.DirtyWorktree {
+		t.Errorf("expected DirtyWorktree to be true")
+	}
+
+	if _, err := os.Stat(worktreeDir); os.IsNotExist(err) {
+		t.Errorf("expected worktree to be preserved due to uncommitted changes")
+	}
+
+	if _, err := os.Stat(filepath.Join(worktreeDir, "unsaved-work.txt")); os.IsNotExist(err) {
+		t.Errorf("expected uncommitted file to still exist")
+	}
+}
+
 func TestDetectWorktree(t *testing.T) {
 	repoDir := testutil.NewTestRepo(t)
 	parentBranch, _ := git.CurrentBranch(repoDir)

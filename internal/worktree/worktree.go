@@ -111,6 +111,13 @@ func LaunchOpenCode(worktreeDir, initialPrompt string) error {
 	return cmd.Run()
 }
 
+var MarkerFiles = []string{
+	".agent-parent-branch",
+	".agent-context",
+	"opencode.json",
+	".opencode/",
+}
+
 func List(repoRoot string) (string, error) {
 	out, err := git.WorktreeList(repoRoot)
 	if err != nil {
@@ -119,9 +126,17 @@ func List(repoRoot string) (string, error) {
 
 	var agentLines []string
 	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, BranchPrefix) {
-			agentLines = append(agentLines, line)
+		if !strings.Contains(line, BranchPrefix) {
+			continue
 		}
+
+		worktreePath := strings.Fields(line)[0]
+		dirty, _ := git.HasUncommittedChanges(worktreePath, MarkerFiles)
+		if dirty {
+			line += " (uncommitted changes)"
+		}
+
+		agentLines = append(agentLines, line)
 	}
 
 	if len(agentLines) == 0 {

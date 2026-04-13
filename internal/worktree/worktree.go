@@ -161,7 +161,7 @@ func List(repoRoot string) (string, error) {
 	}
 
 	var agentLines []string
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		if !strings.Contains(line, BranchPrefix) {
 			continue
 		}
@@ -188,7 +188,7 @@ func ActiveTaskNames(repoRoot string) ([]string, error) {
 	}
 
 	var names []string
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		start := strings.Index(line, "["+BranchPrefix)
 		if start == -1 {
 			continue
@@ -215,9 +215,9 @@ func ResolveWorktreeDir(repoRoot, taskName string) (string, error) {
 	targetBranch := "branch refs/heads/" + BranchPrefix + taskName
 	var currentWorktree string
 
-	for _, line := range strings.Split(porcelain, "\n") {
-		if strings.HasPrefix(line, "worktree ") {
-			currentWorktree = strings.TrimPrefix(line, "worktree ")
+	for line := range strings.SplitSeq(porcelain, "\n") {
+		if worktreePath, ok := strings.CutPrefix(line, "worktree "); ok {
+			currentWorktree = worktreePath
 		}
 		if strings.TrimSpace(line) == targetBranch && currentWorktree != "" {
 			return currentWorktree, nil
@@ -297,9 +297,9 @@ func findOrphanedDirectories(repoRoot string) ([]string, error) {
 	}
 
 	activeWorktrees := make(map[string]bool)
-	for _, line := range strings.Split(porcelain, "\n") {
-		if strings.HasPrefix(line, "worktree ") {
-			activeWorktrees[strings.TrimPrefix(line, "worktree ")] = true
+	for line := range strings.SplitSeq(porcelain, "\n") {
+		if worktreePath, ok := strings.CutPrefix(line, "worktree "); ok {
+			activeWorktrees[worktreePath] = true
 		}
 	}
 
@@ -341,15 +341,14 @@ func findOrphanedBranches(repoRoot string) ([]string, error) {
 	}
 
 	activeBranches := make(map[string]bool)
-	for _, line := range strings.Split(porcelain, "\n") {
-		if strings.HasPrefix(line, "branch refs/heads/") {
-			branch := strings.TrimPrefix(line, "branch refs/heads/")
+	for line := range strings.SplitSeq(porcelain, "\n") {
+		if branch, ok := strings.CutPrefix(line, "branch refs/heads/"); ok {
 			activeBranches[branch] = true
 		}
 	}
 
 	var stale []string
-	for _, line := range strings.Split(branchOutput, "\n") {
+	for line := range strings.SplitSeq(branchOutput, "\n") {
 		branch := strings.TrimSpace(strings.TrimPrefix(line, "* "))
 		if !strings.HasPrefix(branch, BranchPrefix) {
 			continue

@@ -117,21 +117,68 @@ func HasUncommittedChanges(dir string, excludePaths []string) (bool, error) {
 		return true, nil
 	}
 
-	excluded := make(map[string]bool, len(excludePaths))
-	for _, p := range excludePaths {
-		excluded[p] = true
-	}
-
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		if len(line) < 4 {
 			continue
 		}
-		filePath := strings.TrimSpace(line[3:])
-		if !excluded[filePath] {
+		if !allPathsExcluded(parseStatusPaths(line[3:]), excludePaths) {
 			return true, nil
 		}
 	}
 	return false, nil
+}
+
+func parseStatusPaths(statusPath string) []string {
+	statusPath = strings.TrimSpace(statusPath)
+	if statusPath == "" {
+		return nil
+	}
+
+	parts := strings.Split(statusPath, " -> ")
+	paths := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.Trim(strings.TrimSpace(part), "\"")
+		if part != "" {
+			paths = append(paths, normalizeStatusPath(part))
+		}
+	}
+	return paths
+}
+
+func allPathsExcluded(paths, excludePaths []string) bool {
+	if len(paths) == 0 {
+		return true
+	}
+	for _, p := range paths {
+		if !pathExcluded(p, excludePaths) {
+			return false
+		}
+	}
+	return true
+}
+
+func pathExcluded(path string, excludePaths []string) bool {
+	for _, excludePath := range excludePaths {
+		normalizedExclude := normalizeStatusPath(excludePath)
+		if strings.HasSuffix(excludePath, "/") {
+			if path == normalizedExclude || strings.HasPrefix(path, normalizedExclude+"/") {
+				return true
+			}
+			continue
+		}
+		if path == normalizedExclude {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeStatusPath(path string) string {
+	cleaned := filepath.ToSlash(filepath.Clean(path))
+	if cleaned == "." {
+		return ""
+	}
+	return cleaned
 }
 
 func BranchList(dir string) (string, error) {

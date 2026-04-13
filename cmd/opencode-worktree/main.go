@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"strings"
+
 	"github.com/danhenton/opencode-worktree/internal/git"
 	"github.com/danhenton/opencode-worktree/internal/merge"
 	"github.com/danhenton/opencode-worktree/internal/worktree"
@@ -18,12 +20,16 @@ func main() {
 	switch os.Args[1] {
 	case "task":
 		runTask(os.Args[2:])
+	case "attach":
+		runAttach(os.Args[2:])
 	case "merge":
 		runMerge(os.Args[2:])
 	case "list":
 		runList()
 	case "cleanup":
 		runCleanup()
+	case "--completions":
+		runCompletions(os.Args[2:])
 	case "-h", "--help", "help":
 		printUsage()
 	default:
@@ -38,11 +44,15 @@ func printUsage() {
 
 Commands:
   task <name> [message]   Create agent worktree and launch opencode
+  attach <name>           Reattach to an existing agent worktree session
   merge [path]            Merge agent branch back into parent
   list                    Show active agent worktrees
   cleanup                 Remove orphaned worktrees and branches
 
 Task Options:
+  --no-merge              Skip auto-merge after opencode exits
+
+Attach Options:
   --no-merge              Skip auto-merge after opencode exits
 
 Merge Options:
@@ -140,6 +150,91 @@ func runTask(args []string) {
 		exitError("%v", err)
 	}
 	printMergeResult(result)
+}
+
+func runAttach(args []string) {
+	var taskName string
+	noMerge := false
+
+	for _, arg := range args {
+		switch arg {
+		case "--no-merge":
+			noMerge = true
+		case "-h", "--help":
+			printUsage()
+			os.Exit(0)
+		default:
+			if len(arg) > 0 && arg[0] == '-' {
+				exitError("unknown option: %s", arg)
+			}
+			if taskName == "" {
+				taskName = arg
+			} else {
+				exitError("unexpected extra argument: %s", arg)
+			}
+		}
+	}
+
+	if taskName == "" {
+		exitError("task name is required\n\nUsage: opencode-worktree attach <name> [--no-merge]")
+	}
+
+	repoRoot, err := git.RepoRoot(".")
+	if err != nil {
+		exitError("not inside a git repository")
+	}
+
+	worktreeDir, err := worktree.ResolveWorktreeDir(repoRoot, taskName)
+	if err != nil {
+		exitError("%v", err)
+	}
+
+	fmt.Printf("🔗 Attaching to agent session: %s\n", taskName)
+	fmt.Printf("   Path: %s\n\n", worktreeDir)
+
+	_ = worktree.LaunchOpenCode(worktreeDir, "")
+
+	if noMerge {
+		return
+	}
+
+	fmt.Println()
+	result, err := merge.Run(worktreeDir, true)
+	if err != nil {
+		if result != nil && len(result.ConflictFiles) > 0 {
+			fmt.Fprintf(os.Stderr, "❌ %v\n", err)
+			fmt.Fprintln(os.Stderr, "Conflicting files:")
+			for _, f := range result.ConflictFiles {
+				fmt.Fprintf(os.Stderr, "  %s\n", f)
+			}
+			os.Exit(1)
+		}
+		exitError("%v", err)
+	}
+	printMergeResult(result)
+}
+
+func runCompletions(args []string) {
+	repoRoot, err := git.RepoRoot(".")
+	if err != nil {
+		os.Exit(1)
+	}
+
+	if len(args) == 0 {
+		fmt.Println(strings.Join([]string{"task", "attach", "merge", "list", "cleanup"}, "\n"))
+		return
+	}
+
+	switch args[0] {
+	case "attach":
+		names, err := worktree.ActiveTaskNames(repoRoot)
+		if err != nil {
+			os.Exit(1)
+		}
+		if len(names) > 0 {
+			fmt.Println(strings.Join(names, "\n"))
+		}
+	}
 }
 
 func runMerge(args []string) {

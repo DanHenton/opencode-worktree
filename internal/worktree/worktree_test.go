@@ -180,6 +180,65 @@ func TestList(t *testing.T) {
 	}
 }
 
+func TestActiveTaskNames(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	parentBranch, _ := git.CurrentBranch(repoDir)
+
+	names, err := worktree.ActiveTaskNames(repoDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(names) != 0 {
+		t.Errorf("expected no task names, got %v", names)
+	}
+
+	if _, err := worktree.Create(repoDir, "alpha", parentBranch); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := worktree.Create(repoDir, "beta", parentBranch); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	names, err = worktree.ActiveTaskNames(repoDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(names) != 2 {
+		t.Fatalf("expected 2 task names, got %v", names)
+	}
+
+	found := map[string]bool{}
+	for _, n := range names {
+		found[n] = true
+	}
+	if !found["alpha"] || !found["beta"] {
+		t.Errorf("expected alpha and beta, got %v", names)
+	}
+}
+
+func TestResolveWorktreeDir(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	parentBranch, _ := git.CurrentBranch(repoDir)
+
+	_, err := worktree.ResolveWorktreeDir(repoDir, "nonexistent")
+	if err == nil {
+		t.Errorf("expected error for nonexistent task")
+	}
+
+	createdDir, err := worktree.Create(repoDir, "resolve-me", parentBranch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	resolved, err := worktree.ResolveWorktreeDir(repoDir, "resolve-me")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resolved != createdDir {
+		t.Errorf("expected %q, got %q", createdDir, resolved)
+	}
+}
+
 func TestCleanup(t *testing.T) {
 	repoDir := testutil.NewTestRepo(t)
 	parentBranch, _ := git.CurrentBranch(repoDir)

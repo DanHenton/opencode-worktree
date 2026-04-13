@@ -1,6 +1,7 @@
 package git_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -73,5 +74,47 @@ func TestCommitCountBetween(t *testing.T) {
 	}
 	if count != 3 {
 		t.Errorf("expected 3 commits, got %d", count)
+	}
+}
+
+func TestHasUncommittedChanges(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+
+	dirty, err := git.HasUncommittedChanges(repoDir, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if dirty {
+		t.Errorf("expected clean repo, got dirty")
+	}
+
+	if err := os.WriteFile(filepath.Join(repoDir, "untracked.txt"), []byte("hello"), 0644); err != nil {
+		t.Fatalf("failed to write file: %v", err)
+	}
+
+	dirty, err = git.HasUncommittedChanges(repoDir, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !dirty {
+		t.Errorf("expected dirty repo after adding untracked file")
+	}
+
+	dirty, err = git.HasUncommittedChanges(repoDir, []string{"untracked.txt"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if dirty {
+		t.Errorf("expected clean repo when excluding the untracked file")
+	}
+
+	testutil.CommitFile(t, repoDir, "untracked.txt", "hello", "Commit untracked")
+
+	dirty, err = git.HasUncommittedChanges(repoDir, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if dirty {
+		t.Errorf("expected clean repo after committing")
 	}
 }

@@ -111,6 +111,13 @@ func LaunchOpenCode(worktreeDir, initialPrompt string) error {
 	return cmd.Run()
 }
 
+var MarkerFiles = []string{
+	".agent-parent-branch",
+	".agent-context",
+	"opencode.json",
+	".opencode/",
+}
+
 func List(repoRoot string) (string, error) {
 	out, err := git.WorktreeList(repoRoot)
 	if err != nil {
@@ -119,15 +126,69 @@ func List(repoRoot string) (string, error) {
 
 	var agentLines []string
 	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, BranchPrefix) {
-			agentLines = append(agentLines, line)
+		if !strings.Contains(line, BranchPrefix) {
+			continue
 		}
+
+		worktreePath := strings.Fields(line)[0]
+		dirty, _ := git.HasUncommittedChanges(worktreePath, MarkerFiles)
+		if dirty {
+			line += " (uncommitted changes)"
+		}
+
+		agentLines = append(agentLines, line)
 	}
 
 	if len(agentLines) == 0 {
 		return "  (none)", nil
 	}
 	return strings.Join(agentLines, "\n"), nil
+}
+
+func ActiveTaskNames(repoRoot string) ([]string, error) {
+	out, err := git.WorktreeList(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for _, line := range strings.Split(out, "\n") {
+		start := strings.Index(line, "["+BranchPrefix)
+		if start == -1 {
+			continue
+		}
+		end := strings.Index(line[start:], "]")
+		if end == -1 {
+			continue
+		}
+		branch := line[start+1 : start+end]
+		name := strings.TrimPrefix(branch, BranchPrefix)
+		if name != "" {
+			names = append(names, name)
+		}
+	}
+	return names, nil
+}
+
+func ResolveWorktreeDir(repoRoot, taskName string) (string, error) {
+	porcelain, err := git.WorktreeListPorcelain(repoRoot)
+	if err != nil {
+		return "", err
+	}
+
+	targetBranch := "branch refs/heads/" + BranchPrefix + taskName
+	var currentWorktree string
+
+	for _, line := range strings.Split(porcelain, "\n") {
+		if strings.HasPrefix(line, "worktree ") {
+			currentWorktree = strings.TrimPrefix(line, "worktree ")
+		}
+		if strings.TrimSpace(line) == targetBranch && currentWorktree != "" {
+			return currentWorktree, nil
+		}
+	}
+
+	return "", fmt.Errorf("no worktree found for task '%s'", taskName)
 }
 
 func Cleanup(repoRoot string) error {

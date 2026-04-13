@@ -11,6 +11,9 @@ import (
 	"github.com/danhenton/opencode-worktree/internal/worktree"
 )
 
+// version is set at build time via ldflags. Defaults to "dev" for local builds.
+var version = "dev"
+
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
@@ -32,6 +35,8 @@ func main() {
 		runCompletions(os.Args[2:])
 	case "-h", "--help", "help":
 		printUsage()
+	case "version", "--version":
+		fmt.Printf("opencode-worktree %s\n", version)
 	default:
 		fmt.Fprintf(os.Stderr, "❌ Unknown command: %s\n\n", os.Args[1])
 		printUsage()
@@ -40,7 +45,9 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Print(`Usage: opencode-worktree <command> [options]
+	fmt.Printf(`opencode-worktree %s
+
+Usage: opencode-worktree <command> [options]
 
 Commands:
   task <name> [message]   Create agent worktree and launch opencode
@@ -60,10 +67,11 @@ Merge Options:
 
 General:
   -h, --help              Show this help message
+  version, --version      Show version
 
 Alias:
   The installer adds 'ocwt' as a shell alias for opencode-worktree.
-`)
+`, version)
 }
 
 func runTask(args []string) {

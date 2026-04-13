@@ -11,7 +11,15 @@ go fmt ./...
 
 ## Project Structure
 
-- `cmd/opencode-worktree/main.go` — Entry point, subcommand routing, flag parsing
+- `cmd/opencode-worktree/main.go` — Entry point, routing switch (`run()`), usage output, `errSilent` dispatch
+- `cmd/opencode-worktree/task.go` — `runTask` handler
+- `cmd/opencode-worktree/attach.go` — `runAttach` handler
+- `cmd/opencode-worktree/merge_cmd.go` — `runMerge` handler
+- `cmd/opencode-worktree/sync_cmd.go` — `runSync` handler + `handleSyncError`
+- `cmd/opencode-worktree/list.go` — `runList` handler
+- `cmd/opencode-worktree/cleanup.go` — `runCleanup` handler
+- `cmd/opencode-worktree/completions.go` — `runCompletions` handler
+- `cmd/opencode-worktree/output.go` — Shared output helpers: `emoji`, `printMergeResult`, `handleMergeError`, `errSilent`
 - `internal/git/` — Thin wrappers around `exec.Command("git", ...)`, no abstractions
 - `internal/worktree/` — Create, list, cleanup worktrees; launch opencode; copy config
 - `internal/merge/` — Merge agent branch into parent with flock serialization

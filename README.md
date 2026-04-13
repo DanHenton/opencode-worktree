@@ -13,6 +13,15 @@ When using AI coding agents on complex tasks, you want isolation — the agent w
 
 ## Install
 
+### LLM Agent Install
+
+Paste this into your LLM agent session:
+
+```
+Install opencode-worktree by following the instructions here:
+https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/docs/install.md
+```
+
 ### Quick Install (macOS / Linux)
 
 ```bash

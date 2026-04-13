@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 )
@@ -9,34 +10,45 @@ import (
 var version = "dev"
 
 func main() {
+	if err := run(); err != nil {
+		if !errors.Is(err, errSilent) {
+			fmt.Fprint(os.Stderr, emoji("❌ ", "error: ")+err.Error()+"\n")
+		}
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	if len(os.Args) < 2 {
 		printUsage()
-		os.Exit(1)
+		return errSilent
 	}
 
 	switch os.Args[1] {
 	case "task":
-		runTask(os.Args[2:])
+		return runTask(os.Args[2:])
 	case "attach":
-		runAttach(os.Args[2:])
+		return runAttach(os.Args[2:])
 	case "merge":
-		runMerge(os.Args[2:])
+		return runMerge(os.Args[2:])
 	case "list":
-		runList()
+		return runList(os.Args[2:])
 	case "cleanup":
-		runCleanup(os.Args[2:])
+		return runCleanup(os.Args[2:])
 	case "sync":
-		runSync(os.Args[2:])
+		return runSync(os.Args[2:])
 	case "--completions":
-		runCompletions(os.Args[2:])
+		return runCompletions(os.Args[2:])
 	case "-h", "--help", "help":
 		printUsage()
+		return nil
 	case "version", "--version":
 		fmt.Printf("opencode-worktree %s\n", version)
+		return nil
 	default:
 		fmt.Fprintf(os.Stderr, "%sUnknown command: %s\n\n", emoji("❌ ", "error: "), os.Args[1])
 		printUsage()
-		os.Exit(1)
+		return errSilent
 	}
 }
 

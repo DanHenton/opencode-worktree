@@ -7,16 +7,19 @@ import (
 	"github.com/danhenton/opencode-worktree/internal/worktree"
 )
 
-func runList() {
+func runList(args []string) error {
+	_ = args
+
 	repoRoot, err := git.RepoRoot(".")
 	if err != nil {
-		exitError("not inside a git repository")
+		return fmt.Errorf("not inside a git repository")
 	}
 
 	fmt.Printf("%sActive agent worktrees:\n", emoji("🗂️  ", ""))
 	out, err := worktree.List(repoRoot)
 	if err != nil {
-		exitError("%v", err)
+		return fmt.Errorf("%v", err)
 	}
 	fmt.Println(out)
+	return nil
 }

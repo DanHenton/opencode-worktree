@@ -10,7 +10,7 @@ import (
 	"github.com/danhenton/opencode-worktree/internal/worktree"
 )
 
-func runTask(args []string) {
+func runTask(args []string) error {
 	fs := flag.NewFlagSet("task", flag.ContinueOnError)
 	noMerge := fs.Bool("no-merge", false, "Skip auto-merge after opencode exits")
 	fs.Usage = func() {
@@ -30,15 +30,15 @@ Examples:
 	}
 
 	if err := fs.Parse(args); err != nil {
-		os.Exit(1)
+		return errSilent
 	}
 
 	positional := fs.Args()
 	if len(positional) == 0 {
-		exitError("task name is required\n\nUsage: opencode-worktree task <name> [message] [--no-merge]")
+		return fmt.Errorf("task name is required\n\nUsage: opencode-worktree task <name> [message] [--no-merge]")
 	}
 	if len(positional) > 2 {
-		exitError("unexpected extra argument: %s", positional[2])
+		return fmt.Errorf("unexpected extra argument: %s", positional[2])
 	}
 
 	taskName := positional[0]
@@ -48,25 +48,25 @@ Examples:
 	}
 
 	if err := worktree.ValidateTaskName(taskName); err != nil {
-		exitError("%v", err)
+		return fmt.Errorf("%v", err)
 	}
 
 	repoRoot, err := git.RepoRoot(".")
 	if err != nil {
-		exitError("not inside a git repository")
+		return fmt.Errorf("not inside a git repository")
 	}
 
 	parentBranch, err := git.CurrentBranch(repoRoot)
 	if err != nil || parentBranch == "" {
-		exitError("not on a named branch (detached HEAD) — checkout a branch first")
+		return fmt.Errorf("not on a named branch (detached HEAD) — checkout a branch first")
 	}
 
 	exists, err := worktree.AlreadyExists(repoRoot, taskName)
 	if err != nil {
-		exitError("%v", err)
+		return fmt.Errorf("%v", err)
 	}
 	if exists {
-		exitError("a worktree for '%s%s' already exists — use 'opencode-worktree list' to see active sessions", worktree.BranchPrefix, taskName)
+		return fmt.Errorf("a worktree for '%s%s' already exists — use 'opencode-worktree list' to see active sessions", worktree.BranchPrefix, taskName)
 	}
 
 	worktreeDir := worktree.WorktreeDir(repoRoot, taskName)
@@ -79,7 +79,7 @@ Examples:
 
 	createdDir, err := worktree.Create(repoRoot, taskName, parentBranch)
 	if err != nil {
-		exitError("%v", err)
+		return fmt.Errorf("%v", err)
 	}
 
 	fmt.Printf("%sAgent session '%s' starting.\n", emoji("✅ ", ""), taskName)
@@ -92,13 +92,16 @@ Examples:
 	_ = worktree.LaunchOpenCode(createdDir, initialPrompt)
 
 	if *noMerge {
-		return
+		return nil
 	}
 
 	fmt.Println()
 	result, err := merge.Run(createdDir, true)
 	if err != nil {
-		handleMergeError(result, err)
+		if err := handleMergeError(result, err); err != nil {
+			return err
+		}
 	}
 	printMergeResult(result)
+	return nil
 }

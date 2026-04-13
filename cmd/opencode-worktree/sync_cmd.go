@@ -9,7 +9,7 @@ import (
 	"github.com/danhenton/opencode-worktree/internal/worktree"
 )
 
-func runSync(args []string) {
+func runSync(args []string) error {
 	fs := flag.NewFlagSet("sync", flag.ContinueOnError)
 	fs.Usage = func() {
 		fmt.Fprint(os.Stderr, `Usage: opencode-worktree sync [path]
@@ -25,12 +25,12 @@ Examples:
 	}
 
 	if err := fs.Parse(args); err != nil {
-		os.Exit(1)
+		return errSilent
 	}
 
 	positional := fs.Args()
 	if len(positional) > 1 {
-		exitError("unexpected extra argument: %s", positional[1])
+		return fmt.Errorf("unexpected extra argument: %s", positional[1])
 	}
 
 	var worktreePath string
@@ -41,25 +41,28 @@ Examples:
 	if worktreePath == "" {
 		detected, err := merge.DetectWorktree()
 		if err != nil {
-			exitError("%v\n\nUsage: opencode-worktree sync [worktree-path]", err)
+			return fmt.Errorf("%v\n\nUsage: opencode-worktree sync [worktree-path]", err)
 		}
 		worktreePath = detected
 	}
 
 	result, err := worktree.Sync(worktreePath)
 	if err != nil {
-		handleSyncError(result, err)
+		if err := handleSyncError(result, err); err != nil {
+			return err
+		}
 	}
 
 	if result.AlreadyCurrent {
 		fmt.Printf("%sAlready up to date with %s.\n", emoji("✅ ", ""), result.ParentBranch)
-		return
+		return nil
 	}
 
 	fmt.Printf("%sRebased %s onto %s.\n", emoji("✅ ", ""), result.AgentBranch, result.ParentBranch)
+	return nil
 }
 
-func handleSyncError(result *worktree.SyncResult, err error) {
+func handleSyncError(result *worktree.SyncResult, err error) error {
 	if result != nil && len(result.ConflictFiles) > 0 {
 		fmt.Fprintf(os.Stderr, "%sRebase conflict: %s onto %s\n", emoji("❌ ", "error: "), result.AgentBranch, result.ParentBranch)
 		fmt.Fprintln(os.Stderr, "Conflicting files:")
@@ -73,7 +76,7 @@ func handleSyncError(result *worktree.SyncResult, err error) {
 		fmt.Fprintln(os.Stderr, "  # Fix conflicts in the listed files")
 		fmt.Fprintln(os.Stderr, "  git add <resolved-files>")
 		fmt.Fprintln(os.Stderr, "  git rebase --continue")
-		os.Exit(1)
+		return errSilent
 	}
-	exitError("%v", err)
+	return fmt.Errorf("%v", err)
 }

@@ -1,13 +1,17 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/danhenton/opencode-worktree/internal/merge"
 )
 
-var useEmoji = detectTerminal()
+var (
+	errSilent = errors.New("")
+	useEmoji  = detectTerminal()
+)
 
 func detectTerminal() bool {
 	fi, err := os.Stdout.Stat()
@@ -22,11 +26,6 @@ func emoji(e, fallback string) string {
 		return e
 	}
 	return fallback
-}
-
-func exitError(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, emoji("❌ ", "error: ")+format+"\n", args...)
-	os.Exit(1)
 }
 
 func printMergeResult(result *merge.Result) {
@@ -47,7 +46,7 @@ func printMergeResult(result *merge.Result) {
 	}
 }
 
-func handleMergeError(result *merge.Result, err error) {
+func handleMergeError(result *merge.Result, err error) error {
 	if result != nil && len(result.ConflictFiles) > 0 {
 		fmt.Fprintf(os.Stderr, "%sMerge conflict: %s into %s\n", emoji("❌ ", "error: "), result.AgentBranch, result.ParentBranch)
 		fmt.Fprintln(os.Stderr, "Conflicting files:")
@@ -62,7 +61,7 @@ func handleMergeError(result *merge.Result, err error) {
 		fmt.Fprintln(os.Stderr, "  git add <resolved-files>")
 		fmt.Fprintln(os.Stderr, "  git commit")
 		fmt.Fprintln(os.Stderr, "  opencode-worktree cleanup")
-		os.Exit(1)
+		return errSilent
 	}
-	exitError("%v", err)
+	return fmt.Errorf("%v", err)
 }

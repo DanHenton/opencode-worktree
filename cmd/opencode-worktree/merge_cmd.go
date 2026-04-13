@@ -8,7 +8,7 @@ import (
 	"github.com/danhenton/opencode-worktree/internal/merge"
 )
 
-func runMerge(args []string) {
+func runMerge(args []string) error {
 	fs := flag.NewFlagSet("merge", flag.ContinueOnError)
 	noCleanup := fs.Bool("no-cleanup", false, "Merge but keep worktree and branch")
 	fs.Usage = func() {
@@ -29,12 +29,12 @@ Examples:
 	}
 
 	if err := fs.Parse(args); err != nil {
-		os.Exit(1)
+		return errSilent
 	}
 
 	positional := fs.Args()
 	if len(positional) > 1 {
-		exitError("unexpected extra argument: %s", positional[1])
+		return fmt.Errorf("unexpected extra argument: %s", positional[1])
 	}
 
 	var worktreePath string
@@ -45,7 +45,7 @@ Examples:
 	if worktreePath == "" {
 		detected, err := merge.DetectWorktree()
 		if err != nil {
-			exitError("%v\n\nUsage: opencode-worktree merge [worktree-path] [--no-cleanup]", err)
+			return fmt.Errorf("%v\n\nUsage: opencode-worktree merge [worktree-path] [--no-cleanup]", err)
 		}
 		worktreePath = detected
 	}
@@ -53,7 +53,10 @@ Examples:
 	cleanup := !*noCleanup
 	result, err := merge.Run(worktreePath, cleanup)
 	if err != nil {
-		handleMergeError(result, err)
+		if err := handleMergeError(result, err); err != nil {
+			return err
+		}
 	}
 	printMergeResult(result)
+	return nil
 }

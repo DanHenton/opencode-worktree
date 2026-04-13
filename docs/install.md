@@ -166,7 +166,7 @@ command -v opencode-worktree
 opencode-worktree --help
 ```
 
-This should display the available subcommands: `task`, `merge`, `list`, `cleanup`.
+This should display the available subcommands: `task`, `attach`, `merge`, `sync`, `list`, `cleanup`.
 
 ### Step 5: Confirm with user
 

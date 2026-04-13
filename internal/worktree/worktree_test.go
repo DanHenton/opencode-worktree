@@ -125,7 +125,11 @@ func TestAlreadyExists(t *testing.T) {
 	taskName := "test-exists"
 	parentBranch, _ := git.CurrentBranch(repoDir)
 
-	if worktree.AlreadyExists(repoDir, taskName) {
+	exists, err := worktree.AlreadyExists(repoDir, taskName)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if exists {
 		t.Errorf("expected worktree not to exist yet")
 	}
 
@@ -133,7 +137,11 @@ func TestAlreadyExists(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !worktree.AlreadyExists(repoDir, taskName) {
+	exists, err = worktree.AlreadyExists(repoDir, taskName)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !exists {
 		t.Errorf("expected worktree to exist")
 	}
 }
@@ -255,7 +263,7 @@ func TestCleanup(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if err := worktree.Cleanup(repoDir); err != nil {
+	if err := worktree.Cleanup(repoDir, worktree.CleanupOptions{Yes: true}); err != nil {
 		t.Fatalf("unexpected error during cleanup: %v", err)
 	}
 
@@ -265,5 +273,35 @@ func TestCleanup(t *testing.T) {
 
 	if _, err := os.Stat(activeDir); os.IsNotExist(err) {
 		t.Errorf("expected active worktree dir to be preserved")
+	}
+}
+
+func TestCleanupDryRun(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+
+	orphanedTask := "orphaned-dry"
+	orphanedDir := worktree.WorktreeDir(repoDir, orphanedTask)
+	if err := os.MkdirAll(orphanedDir, 0755); err != nil {
+		t.Fatalf("failed to create orphaned dir: %v", err)
+	}
+
+	if err := worktree.Cleanup(repoDir, worktree.CleanupOptions{DryRun: true}); err != nil {
+		t.Fatalf("unexpected error during dry-run cleanup: %v", err)
+	}
+
+	if _, err := os.Stat(orphanedDir); os.IsNotExist(err) {
+		t.Errorf("expected orphaned dir to still exist after dry-run")
+	}
+}
+
+func TestLaunchOpenCodeMissingBinary(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+
+	err := worktree.LaunchOpenCode(t.TempDir(), "")
+	if err == nil {
+		t.Fatal("expected error when opencode is not in PATH")
+	}
+	if !strings.Contains(err.Error(), "opencode not found in PATH") {
+		t.Errorf("expected error about missing opencode, got: %v", err)
 	}
 }

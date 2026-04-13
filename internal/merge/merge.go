@@ -17,6 +17,7 @@ type Result struct {
 	AgentBranch   string
 	ParentBranch  string
 	WorktreePath  string
+	RepoRoot      string
 	NoNewCommits  bool
 	DirtyWorktree bool
 }
@@ -43,8 +44,11 @@ func Run(worktreePath string, cleanup bool) (*Result, error) {
 	if agentBranch == "" {
 		return nil, fmt.Errorf("could not determine agent branch for worktree: %s (detached HEAD?)", worktreePath)
 	}
+	if !strings.HasPrefix(agentBranch, worktree.BranchPrefix) {
+		return nil, fmt.Errorf("not a managed agent worktree: branch %q does not have %s prefix", agentBranch, worktree.BranchPrefix)
+	}
 
-	repoRoot, err := resolveRepoRoot(worktreePath)
+	repoRoot, gitDir, err := resolveRepoRoot(worktreePath)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +62,7 @@ func Run(worktreePath string, cleanup bool) (*Result, error) {
 		AgentBranch:  agentBranch,
 		ParentBranch: parentBranch,
 		WorktreePath: worktreePath,
+		RepoRoot:     repoRoot,
 	}
 
 	dirty, err := git.HasUncommittedChanges(worktreePath, worktree.MarkerFiles)
@@ -77,7 +82,7 @@ func Run(worktreePath string, cleanup bool) (*Result, error) {
 		return result, nil
 	}
 
-	lockPath := filepath.Join(os.TempDir(), filepath.Base(repoRoot)+"-merge.lock")
+	lockPath := filepath.Join(gitDir, "agent-merge.lock")
 	fileLock := flock.New(lockPath)
 
 	if err := fileLock.Lock(); err != nil {
@@ -140,19 +145,19 @@ func readParentBranch(worktreePath string) (string, error) {
 	return branch, nil
 }
 
-func resolveRepoRoot(worktreePath string) (string, error) {
+func resolveRepoRoot(worktreePath string) (string, string, error) {
 	commonDir, err := git.GitCommonDir(worktreePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve git common dir: %w", err)
+		return "", "", fmt.Errorf("failed to resolve git common dir: %w", err)
 	}
 
 	absCommonDir, err := filepath.Abs(commonDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve absolute common dir: %w", err)
+		return "", "", fmt.Errorf("failed to resolve absolute common dir: %w", err)
 	}
 
 	repoRoot := filepath.Dir(absCommonDir)
-	return repoRoot, nil
+	return repoRoot, absCommonDir, nil
 }
 
 func cleanupWorktree(repoRoot, worktreePath, agentBranch string) error {

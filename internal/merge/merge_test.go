@@ -3,6 +3,7 @@ package merge_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/danhenton/opencode-worktree/internal/git"
@@ -79,6 +80,29 @@ func TestMergeNoNewCommits(t *testing.T) {
 
 	if _, err := os.Stat(worktreeDir); !os.IsNotExist(err) {
 		t.Errorf("expected worktree to be cleaned up")
+	}
+}
+
+func TestMergeRejectsNonAgentWorktree(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	parentBranch, _ := git.CurrentBranch(repoDir)
+
+	worktreeDir := filepath.Join(t.TempDir(), "plain-worktree")
+	if err := git.WorktreeAdd(repoDir, worktreeDir, "plain-feature", parentBranch); err != nil {
+		t.Fatalf("failed to create worktree: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(worktreeDir, ".agent-parent-branch"), []byte(parentBranch), 0644); err != nil {
+		t.Fatalf("failed to write parent branch marker: %v", err)
+	}
+
+	_, err := merge.Run(worktreeDir, true)
+	if err == nil {
+		t.Fatalf("expected error for non-agent worktree, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "not a managed agent worktree") {
+		t.Fatalf("expected managed worktree error, got %v", err)
 	}
 }
 

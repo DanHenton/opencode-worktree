@@ -1,6 +1,6 @@
 # Binaries
 bin/
-opencode-worktree
+/opencode-worktree
 
 # Go
 *.exe

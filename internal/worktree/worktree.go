@@ -99,7 +99,7 @@ func copyOpenCodeConfig(repoRoot, worktreeDir string) error {
 func LaunchOpenCode(worktreeDir, initialPrompt string) error {
 	var cmd *exec.Cmd
 	if initialPrompt != "" {
-		cmd = exec.Command("opencode", "--message", initialPrompt)
+		cmd = exec.Command("opencode", "--prompt", initialPrompt)
 	} else {
 		cmd = exec.Command("opencode")
 	}

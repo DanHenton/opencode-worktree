@@ -1,17 +1,27 @@
 # opencode-worktree
 
-Git worktree manager for isolated [OpenCode](https://opencode.ai) agent sessions. Create an isolated worktree, launch OpenCode in it, and auto-merge back when done.
+Git worktree manager for isolated [OpenCode](https://opencode.ai) agent sessions.
+
+Run multiple AI agents in parallel — each gets its own branch and directory, fully isolated from your working tree. When they're done, changes merge back automatically. No stashing, no branch juggling, no conflicts between agents.
 
 ## Why?
 
-When using AI coding agents on complex tasks, you want isolation — the agent works on a branch in a separate directory, and you merge its changes back only when ready. This tool automates the entire lifecycle:
+AI coding agents work best with full autonomy over their environment. But you don't want them trampling your working directory — or each other. `opencode-worktree` gives each agent an isolated workspace and handles the entire lifecycle:
 
 1. **Create** an `agent/<task>` branch in a sibling worktree directory
-2. **Launch** OpenCode TUI in that worktree
+2. **Launch** OpenCode in that worktree with your config copied over
 3. **Merge** the agent branch back into your parent branch on exit
 4. **Clean up** the worktree and branch automatically
 
+No manual git commands. No orphaned branches. Multiple agents can run simultaneously with safe, serialized merges.
+
 ## Install
+
+### Quick Install (macOS / Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/install.sh | sh
+```
 
 ### LLM Agent Install
 
@@ -22,81 +32,7 @@ Install opencode-worktree by following the instructions here:
 https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/docs/install.md
 ```
 
-### Quick Install (macOS / Linux)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/install.sh | sh
-```
-
-Override the install directory with `BIN_DIR`:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/install.sh | BIN_DIR=/usr/local/bin sh
-```
-
-### Install with Go
-
-Requires Go 1.24+.
-
-```bash
-go install github.com/danhenton/opencode-worktree/cmd/opencode-worktree@latest
-```
-
-If `opencode-worktree` isn't found after install, add Go's bin directory to your PATH:
-
-```bash
-# Find where Go put it
-go env GOPATH  # binary is in the bin/ subdirectory of this path
-
-# Add to your shell profile (zsh)
-echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.zshrc
-
-# Add to your shell profile (bash)
-echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.bashrc
-
-# Then open a new terminal, or:
-export PATH="$(go env GOPATH)/bin:$PATH"
-```
-
-### Manual Download
-
-Download a release directly from GitHub:
-
-```bash
-# macOS (Apple Silicon)
-curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Darwin_arm64.tar.gz
-
-# macOS (Intel)
-curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Darwin_x86_64.tar.gz
-
-# Linux (x86_64)
-curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Linux_x86_64.tar.gz
-
-# Linux (ARM64)
-curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Linux_arm64.tar.gz
-```
-
-Then extract and install:
-
-```bash
-tar -xzf opencode-worktree_*.tar.gz
-mkdir -p ~/.local/bin
-install -m 0755 opencode-worktree ~/.local/bin/opencode-worktree
-```
-
-If `~/.local/bin` isn't in your PATH, add it to your shell profile:
-
-```bash
-# zsh
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-
-# bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-```
-
-Then open a new terminal.
-
-See all available builds on the [Releases Page](https://github.com/DanHenton/opencode-worktree/releases).
+For other install methods (Go, manual download, PATH troubleshooting), see the [full install guide](docs/install.md).
 
 ## Usage
 
@@ -111,6 +47,7 @@ This will:
 - Create worktree at `../your-repo-agent-fix-auth-bug/`
 - Create branch `agent/fix-auth-bug` from your current branch
 - Copy `opencode.json` and `.opencode/` into the worktree
+- Detect dependency manifests (`package.json`, `go.mod`, etc.) and tell the agent to install them
 - Launch `opencode` in the worktree
 - Auto-merge back into your branch when you exit OpenCode
 
@@ -186,7 +123,9 @@ Each worktree gets two marker files:
 
 ## AGENTS.md Integration
 
-Add this section to your project's `AGENTS.md` to give AI agents context about their worktree environment:
+When `opencode-worktree` launches an agent session, it automatically injects worktree context into the initial message — including branch info, detected dependency manifests, and install commands. No configuration needed.
+
+Optionally, add this section to your project's `AGENTS.md` for additional guidance:
 
 ```markdown
 ## Worktree Agent Sessions

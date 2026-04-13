@@ -60,6 +60,9 @@ Merge Options:
 
 General:
   -h, --help              Show this help message
+
+Alias:
+  The installer adds 'ocwt' as a shell alias for opencode-worktree.
 `)
 }
 

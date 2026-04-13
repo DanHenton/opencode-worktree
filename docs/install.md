@@ -170,7 +170,7 @@ This should display the available subcommands: `task`, `merge`, `list`, `cleanup
 
 ### Step 5: Confirm with user
 
-Tell the user installation is complete. Show them a quick usage example:
+Tell the user installation is complete. Mention the `ocwt` shortcut alias that was installed automatically:
 
 ```bash
 # Start an isolated agent session
@@ -179,3 +179,8 @@ opencode-worktree task my-task-name
 # Start with an initial prompt
 opencode-worktree task my-task-name "Description of what to work on"
 ```
+
+> **Tip:** The installer adds `ocwt` as a shell alias for `opencode-worktree` — use either interchangeably. If you installed manually or via `go install`, add it yourself:
+> ```bash
+> echo "alias ocwt='opencode-worktree'" >> ~/.zshrc  # or ~/.bashrc
+> ```

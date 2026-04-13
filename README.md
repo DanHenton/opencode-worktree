@@ -36,6 +36,8 @@ For other install methods (Go, manual download, PATH troubleshooting), see the [
 
 ## Usage
 
+> **Shortcut:** The installer adds `ocwt` as a shell alias for `opencode-worktree` — use either interchangeably.
+
 ### Start an agent task
 
 ```bash

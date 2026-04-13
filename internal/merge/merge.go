@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/danhenton/opencode-worktree/internal/git"
+	"github.com/danhenton/opencode-worktree/internal/worktree"
 	"github.com/gofrs/flock"
 )
 
@@ -15,7 +16,9 @@ type Result struct {
 	ConflictFiles []string
 	AgentBranch   string
 	ParentBranch  string
+	WorktreePath  string
 	NoNewCommits  bool
+	DirtyWorktree bool
 }
 
 func Run(worktreePath string, cleanup bool) (*Result, error) {
@@ -54,11 +57,21 @@ func Run(worktreePath string, cleanup bool) (*Result, error) {
 	result := &Result{
 		AgentBranch:  agentBranch,
 		ParentBranch: parentBranch,
+		WorktreePath: worktreePath,
+	}
+
+	dirty, err := git.HasUncommittedChanges(worktreePath, worktree.MarkerFiles)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check worktree status: %w", err)
+	}
+
+	if dirty {
+		result.DirtyWorktree = true
 	}
 
 	if commitCount == 0 {
 		result.NoNewCommits = true
-		if cleanup {
+		if cleanup && !dirty {
 			return result, cleanupWorktree(repoRoot, worktreePath, agentBranch)
 		}
 		return result, nil
@@ -91,7 +104,7 @@ func Run(worktreePath string, cleanup bool) (*Result, error) {
 
 	result.Merged = true
 
-	if cleanup {
+	if cleanup && !dirty {
 		if err := cleanupWorktree(repoRoot, worktreePath, agentBranch); err != nil {
 			return result, fmt.Errorf("merge succeeded but cleanup failed: %w", err)
 		}

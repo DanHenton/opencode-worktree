@@ -61,22 +61,3 @@ Examples:
 	fmt.Printf("%sRebased %s onto %s.\n", emoji("✅ ", ""), result.AgentBranch, result.ParentBranch)
 	return nil
 }
-
-func handleSyncError(result *worktree.SyncResult, err error) error {
-	if result != nil && len(result.ConflictFiles) > 0 {
-		fmt.Fprintf(os.Stderr, "%sRebase conflict: %s onto %s\n", emoji("❌ ", "error: "), result.AgentBranch, result.ParentBranch)
-		fmt.Fprintln(os.Stderr, "Conflicting files:")
-		for _, f := range result.ConflictFiles {
-			fmt.Fprintf(os.Stderr, "  %s\n", f)
-		}
-		fmt.Fprintln(os.Stderr)
-		fmt.Fprintln(os.Stderr, "The rebase was aborted. To resolve manually:")
-		fmt.Fprintf(os.Stderr, "  cd %s\n", result.WorktreePath)
-		fmt.Fprintf(os.Stderr, "  git rebase %s\n", result.ParentBranch)
-		fmt.Fprintln(os.Stderr, "  # Fix conflicts in the listed files")
-		fmt.Fprintln(os.Stderr, "  git add <resolved-files>")
-		fmt.Fprintln(os.Stderr, "  git rebase --continue")
-		return errSilent
-	}
-	return fmt.Errorf("%v", err)
-}

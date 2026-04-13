@@ -34,6 +34,8 @@ https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/docs/install.
 
 For other install methods (Go, manual download, PATH troubleshooting), see the [full install guide](docs/install.md).
 
+For command-by-command behavior, examples, and edge cases, see the [command reference](docs/commands/README.md).
+
 ## Usage
 
 > **Shortcut:** The installer adds `ocwt` as a shell alias for `opencode-worktree` — use either interchangeably.

@@ -32,7 +32,7 @@ func Run(worktreePath string, cleanup bool) (*Result, error) {
 		return nil, fmt.Errorf("worktree path does not exist: %s", worktreePath)
 	}
 
-	parentBranch, err := readParentBranch(worktreePath)
+	parentBranch, err := worktree.ReadParentBranch(worktreePath)
 	if err != nil {
 		return nil, err
 	}
@@ -130,19 +130,6 @@ func DetectWorktree() (string, error) {
 	}
 
 	return dir, nil
-}
-
-func readParentBranch(worktreePath string) (string, error) {
-	markerPath := filepath.Join(worktreePath, ".agent-parent-branch")
-	data, err := os.ReadFile(markerPath)
-	if err != nil {
-		return "", fmt.Errorf("missing parent branch marker: %s", markerPath)
-	}
-	branch := strings.TrimSpace(string(data))
-	if branch == "" {
-		return "", fmt.Errorf("parent branch marker is empty: %s", markerPath)
-	}
-	return branch, nil
 }
 
 func resolveRepoRoot(worktreePath string) (string, string, error) {

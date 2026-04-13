@@ -137,3 +137,17 @@ func HasUncommittedChanges(dir string, excludePaths []string) (bool, error) {
 func BranchList(dir string) (string, error) {
 	return run(dir, "branch")
 }
+
+func Rebase(dir, onto string) error {
+	_, err := run(dir, "rebase", onto)
+	return err
+}
+
+func RebaseAbort(dir string) error {
+	_, err := run(dir, "rebase", "--abort")
+	return err
+}
+
+func MergeBase(dir, a, b string) (string, error) {
+	return run(dir, "merge-base", a, b)
+}

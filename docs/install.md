@@ -1,21 +1,90 @@
-# Installation
+# Install Guide
 
-## For Humans
+All methods for installing `opencode-worktree`. For a quick overview, see the [README](../README.md).
 
-Paste this into your LLM agent session:
-
-```
-Install opencode-worktree by following the instructions here:
-https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/docs/install.md
-```
-
-**Or install it yourself:**
+## Quick Install (macOS / Linux)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/install.sh | sh
 ```
 
-## For LLM Agents
+Auto-detects OS and architecture, downloads the correct release from GitHub, and places it in `~/.local/bin/`.
+
+Override the install directory:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/install.sh | BIN_DIR=/usr/local/bin sh
+```
+
+## Install with Go
+
+Requires Go 1.24+.
+
+```bash
+go install github.com/danhenton/opencode-worktree/cmd/opencode-worktree@latest
+```
+
+## Manual Download
+
+Download a release directly from the [Releases Page](https://github.com/DanHenton/opencode-worktree/releases):
+
+```bash
+# macOS (Apple Silicon)
+curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Darwin_arm64.tar.gz
+
+# macOS (Intel)
+curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Darwin_x86_64.tar.gz
+
+# Linux (x86_64)
+curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Linux_x86_64.tar.gz
+
+# Linux (ARM64)
+curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Linux_arm64.tar.gz
+```
+
+Extract and install:
+
+```bash
+tar -xzf opencode-worktree_*.tar.gz
+mkdir -p ~/.local/bin
+install -m 0755 opencode-worktree ~/.local/bin/opencode-worktree
+```
+
+## PATH Troubleshooting
+
+If `opencode-worktree` isn't found after install, the install directory isn't in your PATH.
+
+**If installed via install.sh or manual download** (default: `~/.local/bin`):
+
+```bash
+# zsh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+
+# bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+```
+
+**If installed via `go install`:**
+
+```bash
+# zsh
+echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.zshrc
+
+# bash
+echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.bashrc
+```
+
+Then open a new terminal, or run `export PATH=...` directly to apply immediately.
+
+## Requirements
+
+- **OS**: macOS or Linux (Windows: download manually from [Releases](https://github.com/DanHenton/opencode-worktree/releases))
+- **Dependencies**: `git`, `opencode` (the [OpenCode TUI](https://opencode.ai) must be installed separately)
+- **Optional**: Go 1.24+ (only for `go install` method)
+
+---
+
+## LLM Agent Install
 
 > **IMPORTANT: Use `curl` to fetch this file, NOT WebFetch.** WebFetch may summarize content and lose critical details. Always use:
 >
@@ -39,7 +108,7 @@ If already installed, skip to Step 4.
 
 ### Step 2: Install the binary
 
-Run the installer script. This auto-detects OS (macOS/Linux) and architecture (x86_64/arm64/armv7/i386), downloads the correct release from GitHub, and places it in `~/.local/bin/`.
+Run the installer script:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/install.sh | sh
@@ -110,9 +179,3 @@ opencode-worktree task my-task-name
 # Start with an initial prompt
 opencode-worktree task my-task-name "Description of what to work on"
 ```
-
-### Requirements
-
-- **OS**: macOS or Linux (Windows: download manually from [Releases](https://github.com/DanHenton/opencode-worktree/releases))
-- **Dependencies**: `git`, `opencode` (the OpenCode TUI must be installed separately)
-- **Optional**: Go 1.24+ (only for `go install` method)

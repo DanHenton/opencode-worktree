@@ -13,20 +13,90 @@ When using AI coding agents on complex tasks, you want isolation — the agent w
 
 ## Install
 
-### Pre-compiled Binaries
+### LLM Agent Install
 
-Download the latest release for your OS from the [Releases Page](https://github.com/DanHenton/opencode-worktree/releases).
+Paste this into your LLM agent session:
 
-```bash
-tar -xzf opencode-worktree_Linux_x86_64.tar.gz
-sudo mv opencode-worktree /usr/local/bin/
+```
+Install opencode-worktree by following the instructions here:
+https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/docs/install.md
 ```
 
-### Build from Source
+### Quick Install (macOS / Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/install.sh | sh
+```
+
+Override the install directory with `BIN_DIR`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DanHenton/opencode-worktree/main/install.sh | BIN_DIR=/usr/local/bin sh
+```
+
+### Install with Go
+
+Requires Go 1.24+.
 
 ```bash
 go install github.com/danhenton/opencode-worktree/cmd/opencode-worktree@latest
 ```
+
+If `opencode-worktree` isn't found after install, add Go's bin directory to your PATH:
+
+```bash
+# Find where Go put it
+go env GOPATH  # binary is in the bin/ subdirectory of this path
+
+# Add to your shell profile (zsh)
+echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.zshrc
+
+# Add to your shell profile (bash)
+echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.bashrc
+
+# Then open a new terminal, or:
+export PATH="$(go env GOPATH)/bin:$PATH"
+```
+
+### Manual Download
+
+Download a release directly from GitHub:
+
+```bash
+# macOS (Apple Silicon)
+curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Darwin_arm64.tar.gz
+
+# macOS (Intel)
+curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Darwin_x86_64.tar.gz
+
+# Linux (x86_64)
+curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Linux_x86_64.tar.gz
+
+# Linux (ARM64)
+curl -fsSLO https://github.com/DanHenton/opencode-worktree/releases/latest/download/opencode-worktree_Linux_arm64.tar.gz
+```
+
+Then extract and install:
+
+```bash
+tar -xzf opencode-worktree_*.tar.gz
+mkdir -p ~/.local/bin
+install -m 0755 opencode-worktree ~/.local/bin/opencode-worktree
+```
+
+If `~/.local/bin` isn't in your PATH, add it to your shell profile:
+
+```bash
+# zsh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+
+# bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+```
+
+Then open a new terminal.
+
+See all available builds on the [Releases Page](https://github.com/DanHenton/opencode-worktree/releases).
 
 ## Usage
 

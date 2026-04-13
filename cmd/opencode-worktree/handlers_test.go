@@ -2,6 +2,9 @@ package main
 
 import (
 	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -94,6 +97,24 @@ func TestRunTaskUnknownFlag(t *testing.T) {
 	}
 }
 
+func TestRunTaskReturnsLaunchError(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	t.Chdir(repoDir)
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatalf("failed to find git: %v", err)
+	}
+	t.Setenv("PATH", filepath.Dir(gitPath))
+
+	err = runTask([]string{"launch-fails", "--no-merge"})
+	if err == nil {
+		t.Fatal("expected error when opencode is unavailable")
+	}
+	if !strings.Contains(err.Error(), "opencode not found in PATH") {
+		t.Errorf("expected missing opencode error, got: %v", err)
+	}
+}
+
 func TestRunAttachMissingName(t *testing.T) {
 	repoDir := testutil.NewTestRepo(t)
 	t.Chdir(repoDir)
@@ -152,6 +173,56 @@ func TestRunAttachUnknownFlag(t *testing.T) {
 	}
 	if !errors.Is(err, errSilent) {
 		t.Errorf("expected errSilent for unknown flag, got: %v", err)
+	}
+}
+
+func TestRunAttachReturnsLaunchError(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	t.Chdir(repoDir)
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatalf("failed to find git: %v", err)
+	}
+	t.Setenv("PATH", filepath.Dir(gitPath))
+
+	parentBranch, err := git.CurrentBranch(repoDir)
+	if err != nil {
+		t.Fatalf("failed to get current branch: %v", err)
+	}
+	if _, err := worktree.Create(repoDir, "attach-launch-fails", parentBranch); err != nil {
+		t.Fatalf("failed to create worktree: %v", err)
+	}
+
+	err = runAttach([]string{"attach-launch-fails", "--no-merge"})
+	if err == nil {
+		t.Fatal("expected error when opencode is unavailable")
+	}
+	if !strings.Contains(err.Error(), "opencode not found in PATH") {
+		t.Errorf("expected missing opencode error, got: %v", err)
+	}
+}
+
+func TestRunMergeAcceptsTrailingNoCleanupFlag(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	parentBranch, err := git.CurrentBranch(repoDir)
+	if err != nil {
+		t.Fatalf("failed to get current branch: %v", err)
+	}
+
+	worktreeDir, err := worktree.Create(repoDir, "merge-trailing-flag", parentBranch)
+	if err != nil {
+		t.Fatalf("failed to create worktree: %v", err)
+	}
+
+	testutil.CommitFile(t, worktreeDir, "merged.txt", "content", "Agent commit")
+
+	err = runMerge([]string{worktreeDir, "--no-cleanup"})
+	if err != nil {
+		t.Fatalf("expected trailing --no-cleanup flag to parse, got: %v", err)
+	}
+
+	if _, err := os.Stat(worktreeDir); os.IsNotExist(err) {
+		t.Fatalf("expected worktree to be preserved when --no-cleanup is set")
 	}
 }
 
@@ -320,5 +391,37 @@ func TestRunCompletionsNotInGitRepo(t *testing.T) {
 	err := runCompletions([]string{})
 	if err != nil && !errors.Is(err, errSilent) {
 		t.Errorf("expected nil or errSilent when not in git repo, got: %v", err)
+	}
+}
+
+func TestRunTaskBranchExistsWithoutWorktree(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	t.Chdir(repoDir)
+
+	parentBranch, err := git.CurrentBranch(repoDir)
+	if err != nil {
+		t.Fatalf("failed to get current branch: %v", err)
+	}
+
+	worktreeDir, err := worktree.Create(repoDir, "existing-branch", parentBranch)
+	if err != nil {
+		t.Fatalf("failed to create worktree: %v", err)
+	}
+	if err := git.WorktreeRemove(repoDir, worktreeDir); err != nil {
+		t.Fatalf("failed to remove worktree: %v", err)
+	}
+	if err := git.WorktreePrune(repoDir); err != nil {
+		t.Fatalf("failed to prune worktrees: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(worktreeDir, ".agent-parent-branch")); !os.IsNotExist(err) {
+		t.Fatalf("expected worktree to be removed")
+	}
+
+	err = runTask([]string{"existing-branch", "--no-merge"})
+	if err == nil {
+		t.Fatal("expected error when branch exists without worktree")
+	}
+	if !strings.Contains(err.Error(), "branch named 'agent/existing-branch' already exists") {
+		t.Errorf("expected existing branch error, got: %v", err)
 	}
 }

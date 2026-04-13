@@ -151,6 +151,7 @@ var MarkerFiles = []string{
 	".agent-context",
 	"opencode.json",
 	".opencode/",
+	".sisyphus/",
 }
 
 func List(repoRoot string) (string, error) {

@@ -195,6 +195,39 @@ func TestMergeDirtyWorktreeNoCommitsPreservesWorktree(t *testing.T) {
 	}
 }
 
+func TestMergeIgnoresMarkerDirectoryChanges(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+	parentBranch, _ := git.CurrentBranch(repoDir)
+
+	taskName := "feature-marker-only"
+	worktreeDir, err := worktree.Create(repoDir, taskName, parentBranch)
+	if err != nil {
+		t.Fatalf("failed to create worktree: %v", err)
+	}
+
+	if err := os.MkdirAll(filepath.Join(worktreeDir, ".sisyphus", "plans"), 0755); err != nil {
+		t.Fatalf("failed to create .sisyphus dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(worktreeDir, ".sisyphus", "plans", "draft.md"), []byte("draft"), 0644); err != nil {
+		t.Fatalf("failed to write marker-dir file: %v", err)
+	}
+
+	result, err := merge.Run(worktreeDir, true)
+	if err != nil {
+		t.Fatalf("unexpected error during merge: %v", err)
+	}
+
+	if !result.NoNewCommits {
+		t.Errorf("expected NoNewCommits to be true")
+	}
+	if result.DirtyWorktree {
+		t.Errorf("expected marker directory changes to be ignored")
+	}
+	if _, err := os.Stat(worktreeDir); !os.IsNotExist(err) {
+		t.Errorf("expected worktree to be cleaned up when only marker directories changed")
+	}
+}
+
 func TestMergeDirtyWorktreeWithCommitsPreservesWorktree(t *testing.T) {
 	repoDir := testutil.NewTestRepo(t)
 	parentBranch, _ := git.CurrentBranch(repoDir)

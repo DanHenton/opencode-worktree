@@ -118,3 +118,34 @@ func TestHasUncommittedChanges(t *testing.T) {
 		t.Errorf("expected clean repo after committing")
 	}
 }
+
+func TestHasUncommittedChangesExcludesDirectories(t *testing.T) {
+	repoDir := testutil.NewTestRepo(t)
+
+	if err := os.MkdirAll(filepath.Join(repoDir, ".sisyphus", "plans"), 0755); err != nil {
+		t.Fatalf("failed to create nested directory: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(repoDir, ".sisyphus", "plans", "plan.md"), []byte("draft"), 0644); err != nil {
+		t.Fatalf("failed to write nested file: %v", err)
+	}
+
+	dirty, err := git.HasUncommittedChanges(repoDir, []string{".sisyphus/"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if dirty {
+		t.Errorf("expected clean repo when excluding .sisyphus/ contents")
+	}
+
+	if err := os.WriteFile(filepath.Join(repoDir, "real-change.txt"), []byte("hello"), 0644); err != nil {
+		t.Fatalf("failed to write regular file: %v", err)
+	}
+
+	dirty, err = git.HasUncommittedChanges(repoDir, []string{".sisyphus/"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !dirty {
+		t.Errorf("expected dirty repo when non-excluded files exist")
+	}
+}

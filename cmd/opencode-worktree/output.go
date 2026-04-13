@@ -64,7 +64,7 @@ func handleMergeError(result *merge.Result, err error) error {
 		fmt.Fprintln(os.Stderr, "  opencode-worktree cleanup")
 		return errSilent
 	}
-	return fmt.Errorf("%v", err)
+	return err
 }
 
 func handleSyncError(result *worktree.SyncResult, err error) error {
@@ -83,5 +83,26 @@ func handleSyncError(result *worktree.SyncResult, err error) error {
 		fmt.Fprintln(os.Stderr, "  git rebase --continue")
 		return errSilent
 	}
-	return fmt.Errorf("%v", err)
+	return err
+}
+
+func launchAndMaybeMerge(worktreeDir, initialPrompt string, skipMerge bool) error {
+	launchErr := worktree.LaunchOpenCode(worktreeDir, initialPrompt)
+	if skipMerge {
+		return launchErr
+	}
+
+	fmt.Println()
+	result, err := merge.Run(worktreeDir, true)
+	if err != nil {
+		if err := handleMergeError(result, err); err != nil {
+			return err
+		}
+	}
+	printMergeResult(result)
+
+	if launchErr != nil {
+		return launchErr
+	}
+	return nil
 }

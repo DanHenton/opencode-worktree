@@ -18,7 +18,7 @@ func runList(args []string) error {
 	fmt.Printf("%sActive agent worktrees:\n", emoji("🗂️  ", ""))
 	out, err := worktree.List(repoRoot)
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return err
 	}
 	fmt.Println(out)
 	return nil

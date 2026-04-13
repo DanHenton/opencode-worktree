@@ -29,7 +29,7 @@ Examples:
 `)
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(reorderKnownBoolFlags(args, "--dry-run", "--yes")); err != nil {
 		return errSilent
 	}
 
@@ -41,7 +41,7 @@ Examples:
 	fmt.Printf("%sCleaning up orphaned agent worktrees and branches...\n", emoji("🧹 ", ""))
 	opts := worktree.CleanupOptions{DryRun: *dryRun, Yes: *yes}
 	if err := worktree.Cleanup(repoRoot, opts); err != nil {
-		return fmt.Errorf("%v", err)
+		return err
 	}
 	if !*dryRun {
 		fmt.Printf("%sCleanup complete.\n", emoji("✅ ", ""))

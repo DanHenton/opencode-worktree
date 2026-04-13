@@ -28,7 +28,7 @@ Examples:
 `)
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(reorderKnownBoolFlags(args, "--no-cleanup")); err != nil {
 		return errSilent
 	}
 

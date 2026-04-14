@@ -53,24 +53,10 @@ install_completions() {
   completion_marker="# opencode-worktree completions"
 
   zsh_snippet='# opencode-worktree completions
-_opencode_worktree() {
-  if (( CURRENT == 2 )); then
-    compadd $(opencode-worktree --completions 2>/dev/null)
-  elif (( CURRENT == 3 )); then
-    compadd $(opencode-worktree --completions ${words[2]} 2>/dev/null)
-  fi
-}
-compdef _opencode_worktree opencode-worktree'
+eval "$(opencode-worktree completion zsh)"'
 
   bash_snippet='# opencode-worktree completions
-_opencode_worktree() {
-  if [ "${#COMP_WORDS[@]}" -eq 2 ]; then
-    COMPREPLY=($(compgen -W "$(opencode-worktree --completions 2>/dev/null)" -- "${COMP_WORDS[1]}"))
-  elif [ "${#COMP_WORDS[@]}" -eq 3 ]; then
-    COMPREPLY=($(compgen -W "$(opencode-worktree --completions "${COMP_WORDS[1]}" 2>/dev/null)" -- "${COMP_WORDS[2]}"))
-  fi
-}
-complete -F _opencode_worktree opencode-worktree'
+eval "$(opencode-worktree completion bash)"'
 
   shell="$(basename "${SHELL:-}")"
   rc_file=""

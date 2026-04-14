@@ -1,50 +1,47 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"os"
 
 	"github.com/danhenton/opencode-worktree/internal/git"
 	"github.com/danhenton/opencode-worktree/internal/worktree"
+	"github.com/spf13/cobra"
 )
 
-func runCleanup(args []string) error {
-	fs := flag.NewFlagSet("cleanup", flag.ContinueOnError)
-	dryRun := fs.Bool("dry-run", false, "Show what would be removed without removing anything")
-	yes := fs.Bool("yes", false, "Skip confirmation prompt")
-	fs.Usage = func() {
-		fmt.Fprint(os.Stderr, `Usage: opencode-worktree cleanup [--dry-run] [--yes]
+func newCleanupCmd() *cobra.Command {
+	var dryRun bool
+	var yes bool
 
-Remove orphaned agent worktrees and branches.
+	cmd := &cobra.Command{
+		Use:   "cleanup",
+		Short: "Remove orphaned worktrees and branches",
+		Long: `Remove orphaned agent worktrees and branches.
 
-Options:
-`)
-		fs.PrintDefaults()
-		fmt.Fprint(os.Stderr, `
 Examples:
   opencode-worktree cleanup
   opencode-worktree cleanup --dry-run
-  opencode-worktree cleanup --yes
-`)
+  opencode-worktree cleanup --yes`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repoRoot, err := git.RepoRoot(".")
+			if err != nil {
+				return fmt.Errorf("not inside a git repository")
+			}
+
+			fmt.Printf("%sCleaning up orphaned agent worktrees and branches...\n", emoji("🧹 ", ""))
+			opts := worktree.CleanupOptions{DryRun: dryRun, Yes: yes}
+			if err := worktree.Cleanup(repoRoot, opts); err != nil {
+				return err
+			}
+			if !dryRun {
+				fmt.Printf("%sCleanup complete.\n", emoji("✅ ", ""))
+			}
+			return nil
+		},
 	}
 
-	if err := fs.Parse(reorderKnownBoolFlags(args, "--dry-run", "--yes")); err != nil {
-		return errSilent
-	}
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be removed without removing anything")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation prompt")
 
-	repoRoot, err := git.RepoRoot(".")
-	if err != nil {
-		return fmt.Errorf("not inside a git repository")
-	}
-
-	fmt.Printf("%sCleaning up orphaned agent worktrees and branches...\n", emoji("🧹 ", ""))
-	opts := worktree.CleanupOptions{DryRun: *dryRun, Yes: *yes}
-	if err := worktree.Cleanup(repoRoot, opts); err != nil {
-		return err
-	}
-	if !*dryRun {
-		fmt.Printf("%sCleanup complete.\n", emoji("✅ ", ""))
-	}
-	return nil
+	return cmd
 }

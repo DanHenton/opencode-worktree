@@ -1,58 +1,68 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"os"
 
 	"github.com/danhenton/opencode-worktree/internal/git"
 	"github.com/danhenton/opencode-worktree/internal/worktree"
+	"github.com/spf13/cobra"
 )
 
-func runAttach(args []string) error {
-	fs := flag.NewFlagSet("attach", flag.ContinueOnError)
-	noMerge := fs.Bool("no-merge", false, "Skip auto-merge after opencode exits")
-	fs.Usage = func() {
-		fmt.Fprint(os.Stderr, `Usage: opencode-worktree attach <name> [--no-merge]
+func newAttachCmd() *cobra.Command {
+	var noMerge bool
 
-Reattach to an existing agent worktree session.
+	cmd := &cobra.Command{
+		Use:   "attach <name>",
+		Short: "Reattach to an existing agent worktree session",
+		Long: `Reattach to an existing agent worktree session.
 
-Options:
-`)
-		fs.PrintDefaults()
-		fmt.Fprint(os.Stderr, `
 Examples:
   opencode-worktree attach fix-auth-bug
-  opencode-worktree attach fix-auth-bug --no-merge
-`)
+  opencode-worktree attach fix-auth-bug --no-merge`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("task name is required\n\nUsage: opencode-worktree attach <name> [--no-merge]")
+			}
+			if len(args) > 1 {
+				return fmt.Errorf("unexpected extra argument: %s", args[1])
+			}
+			return nil
+		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			repoRoot, err := git.RepoRoot(".")
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			names, err := worktree.ActiveTaskNames(repoRoot)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return names, cobra.ShellCompDirectiveNoFileComp
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			taskName := args[0]
+
+			repoRoot, err := git.RepoRoot(".")
+			if err != nil {
+				return fmt.Errorf("not inside a git repository")
+			}
+
+			worktreeDir, err := worktree.ResolveWorktreeDir(repoRoot, taskName)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("%sAttaching to agent session: %s\n", emoji("🔗 ", ""), taskName)
+			fmt.Printf("   Path: %s\n\n", worktreeDir)
+
+			return launchAndMaybeMerge(worktreeDir, "", noMerge)
+		},
 	}
 
-	if err := fs.Parse(reorderKnownBoolFlags(args, "--no-merge")); err != nil {
-		return errSilent
-	}
+	cmd.Flags().BoolVarP(&noMerge, "no-merge", "n", false, "Skip auto-merge after opencode exits")
 
-	positional := fs.Args()
-	if len(positional) == 0 {
-		return fmt.Errorf("task name is required\n\nUsage: opencode-worktree attach <name> [--no-merge]")
-	}
-	if len(positional) > 1 {
-		return fmt.Errorf("unexpected extra argument: %s", positional[1])
-	}
-
-	taskName := positional[0]
-
-	repoRoot, err := git.RepoRoot(".")
-	if err != nil {
-		return fmt.Errorf("not inside a git repository")
-	}
-
-	worktreeDir, err := worktree.ResolveWorktreeDir(repoRoot, taskName)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("%sAttaching to agent session: %s\n", emoji("🔗 ", ""), taskName)
-	fmt.Printf("   Path: %s\n\n", worktreeDir)
-
-	return launchAndMaybeMerge(worktreeDir, "", *noMerge)
+	return cmd
 }

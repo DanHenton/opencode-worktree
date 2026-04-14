@@ -3,156 +3,97 @@ package main
 import (
 	"bytes"
 	"errors"
-	"io"
-	"os"
 	"strings"
 	"testing"
 )
 
-func TestRunNoSubcommand(t *testing.T) {
-	origArgs := os.Args
-	defer func() { os.Args = origArgs }()
-	os.Args = []string{"opencode-worktree"}
-
-	err := run()
-	if !errors.Is(err, errSilent) {
-		t.Errorf("expected errSilent, got %v", err)
+func TestRouteNoSubcommand(t *testing.T) {
+	root := newRootCmd()
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{})
+	err := root.Execute()
+	if err != nil {
+		t.Errorf("expected nil error for no subcommand, got %v", err)
 	}
 }
 
-func TestRunUnknownCommand(t *testing.T) {
-	origArgs := os.Args
-	defer func() { os.Args = origArgs }()
-	os.Args = []string{"opencode-worktree", "unknown-cmd"}
-
-	r, w, _ := os.Pipe()
-	origStderr := os.Stderr
-	os.Stderr = w
-	defer func() { os.Stderr = origStderr; w.Close() }()
-
-	err := run()
-
-	w.Close()
-	os.Stderr = origStderr
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-
-	if !errors.Is(err, errSilent) {
-		t.Errorf("expected errSilent for unknown command, got %v", err)
-	}
-	if !strings.Contains(buf.String(), "Unknown command") {
-		t.Errorf("expected stderr to contain 'Unknown command', got: %q", buf.String())
+func TestRouteUnknownCommand(t *testing.T) {
+	root := newRootCmd()
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"unknown-cmd"})
+	err := root.Execute()
+	if err == nil {
+		t.Errorf("expected non-nil error for unknown command, got nil")
 	}
 }
 
-func TestRunHelpShortFlag(t *testing.T) {
-	origArgs := os.Args
-	defer func() { os.Args = origArgs }()
-	os.Args = []string{"opencode-worktree", "-h"}
-
-	r, w, _ := os.Pipe()
-	origStdout := os.Stdout
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout; w.Close() }()
-
-	err := run()
-
-	w.Close()
-	os.Stdout = origStdout
-	io.Copy(io.Discard, r)
-
+func TestRouteHelpShortFlag(t *testing.T) {
+	root := newRootCmd()
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"-h"})
+	err := root.Execute()
 	if err != nil {
 		t.Errorf("expected nil for -h, got %v", err)
 	}
 }
 
-func TestRunHelpLongFlag(t *testing.T) {
-	origArgs := os.Args
-	defer func() { os.Args = origArgs }()
-	os.Args = []string{"opencode-worktree", "--help"}
-
-	r, w, _ := os.Pipe()
-	origStdout := os.Stdout
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout; w.Close() }()
-
-	err := run()
-
-	w.Close()
-	os.Stdout = origStdout
-	io.Copy(io.Discard, r)
-
+func TestRouteHelpLongFlag(t *testing.T) {
+	root := newRootCmd()
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--help"})
+	err := root.Execute()
 	if err != nil {
 		t.Errorf("expected nil for --help, got %v", err)
 	}
 }
 
-func TestRunHelpSubcommand(t *testing.T) {
-	origArgs := os.Args
-	defer func() { os.Args = origArgs }()
-	os.Args = []string{"opencode-worktree", "help"}
-
-	r, w, _ := os.Pipe()
-	origStdout := os.Stdout
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout; w.Close() }()
-
-	err := run()
-
-	w.Close()
-	os.Stdout = origStdout
-	io.Copy(io.Discard, r)
-
+func TestRouteHelpSubcommand(t *testing.T) {
+	root := newRootCmd()
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"help"})
+	err := root.Execute()
 	if err != nil {
 		t.Errorf("expected nil for help subcommand, got %v", err)
 	}
 }
 
-func TestRunVersionSubcommand(t *testing.T) {
-	origArgs := os.Args
-	defer func() { os.Args = origArgs }()
-	os.Args = []string{"opencode-worktree", "version"}
-
-	r, w, _ := os.Pipe()
-	origStdout := os.Stdout
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout; w.Close() }()
-
-	err := run()
-
-	w.Close()
-	os.Stdout = origStdout
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-
+func TestRouteVersionFlag(t *testing.T) {
+	root := newRootCmd()
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--version"})
+	err := root.Execute()
 	if err != nil {
-		t.Errorf("expected nil for version subcommand, got %v", err)
+		t.Errorf("expected nil for --version, got %v", err)
 	}
-	if !strings.Contains(buf.String(), "opencode-worktree dev\n") {
-		t.Errorf("expected version output 'opencode-worktree dev\\n', got: %q", buf.String())
+	if !strings.Contains(outBuf.String(), "opencode-worktree") {
+		t.Errorf("expected version output to contain 'opencode-worktree', got: %q", outBuf.String())
 	}
 }
 
-func TestRunVersionFlag(t *testing.T) {
-	origArgs := os.Args
-	defer func() { os.Args = origArgs }()
-	os.Args = []string{"opencode-worktree", "--version"}
-
-	r, w, _ := os.Pipe()
-	origStdout := os.Stdout
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout; w.Close() }()
-
-	err := run()
-
-	w.Close()
-	os.Stdout = origStdout
-	io.Copy(io.Discard, r)
-
+func TestRouteVersionShortFlag(t *testing.T) {
+	root := newRootCmd()
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"-v"})
+	err := root.Execute()
 	if err != nil {
-		t.Errorf("expected nil for --version, got %v", err)
+		t.Errorf("expected nil for -v, got %v", err)
+	}
+	if !strings.Contains(outBuf.String(), "opencode-worktree") {
+		t.Errorf("expected version output to contain 'opencode-worktree', got: %q", outBuf.String())
 	}
 }
 

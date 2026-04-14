@@ -1,62 +1,53 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"os"
 
 	"github.com/danhenton/opencode-worktree/internal/merge"
+	"github.com/spf13/cobra"
 )
 
-func runMerge(args []string) error {
-	fs := flag.NewFlagSet("merge", flag.ContinueOnError)
-	noCleanup := fs.Bool("no-cleanup", false, "Merge but keep worktree and branch")
-	fs.Usage = func() {
-		fmt.Fprint(os.Stderr, `Usage: opencode-worktree merge [path] [--no-cleanup]
+func newMergeCmd() *cobra.Command {
+	var noCleanup bool
 
-Merge agent branch back into parent. If no path is given,
+	cmd := &cobra.Command{
+		Use:   "merge [worktree-path]",
+		Short: "Merge agent branch back into parent",
+		Long: `Merge agent branch back into parent. If no path is given,
 auto-detects the current directory as an agent worktree.
 
-Options:
-`)
-		fs.PrintDefaults()
-		fmt.Fprint(os.Stderr, `
 Examples:
   opencode-worktree merge
   opencode-worktree merge /path/to/worktree
-  opencode-worktree merge --no-cleanup
-`)
+  opencode-worktree merge --no-cleanup`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var worktreePath string
+			if len(args) == 1 {
+				worktreePath = args[0]
+			}
+
+			if worktreePath == "" {
+				detected, err := merge.DetectWorktree()
+				if err != nil {
+					return fmt.Errorf("%v\n\nUsage: opencode-worktree merge [worktree-path] [--no-cleanup]", err)
+				}
+				worktreePath = detected
+			}
+
+			cleanup := !noCleanup
+			result, err := merge.Run(worktreePath, cleanup)
+			if err != nil {
+				if err := handleMergeError(result, err); err != nil {
+					return err
+				}
+			}
+			printMergeResult(result)
+			return nil
+		},
 	}
 
-	if err := fs.Parse(reorderKnownBoolFlags(args, "--no-cleanup")); err != nil {
-		return errSilent
-	}
+	cmd.Flags().BoolVarP(&noCleanup, "no-cleanup", "c", false, "Merge but keep worktree and branch")
 
-	positional := fs.Args()
-	if len(positional) > 1 {
-		return fmt.Errorf("unexpected extra argument: %s", positional[1])
-	}
-
-	var worktreePath string
-	if len(positional) == 1 {
-		worktreePath = positional[0]
-	}
-
-	if worktreePath == "" {
-		detected, err := merge.DetectWorktree()
-		if err != nil {
-			return fmt.Errorf("%v\n\nUsage: opencode-worktree merge [worktree-path] [--no-cleanup]", err)
-		}
-		worktreePath = detected
-	}
-
-	cleanup := !*noCleanup
-	result, err := merge.Run(worktreePath, cleanup)
-	if err != nil {
-		if err := handleMergeError(result, err); err != nil {
-			return err
-		}
-	}
-	printMergeResult(result)
-	return nil
+	return cmd
 }
